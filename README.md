@@ -122,8 +122,3 @@ Once running, here's how you can test the platform:
 2. **NGO Flow:** Register an account as an NGO. Log back into the Admin account, navigate to the dashboard table, and mark the new NGO as **Verified**.
 3. **Marketplace Flow:** Log into the verified NGO and create a listing. Create a second NGO and request that listing.
 4. **Donor Flow:** Register as a Donor (auto-verified). Go to the "Explore" tab, find an NGO, and try making a donation.
-
----
-
-## 📝 License
-This project is open-source and available under the [MIT License](LICENSE).
