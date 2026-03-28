@@ -1,0 +1,314 @@
+NGOConnect — Project State Document
+Use Case & User Story Reference
+
+================================================================================
+
+1. SYSTEM OVERVIEW
+
+NGOConnect is a web-based marketplace that serves two primary purposes:
+  1. Resource Exchange — Verified NGOs can post surplus items and request items from each other.
+  2. Donor Funding — Individual donors can discover verified NGOs and contribute money directly.
+
+A trusted Admin role governs the ecosystem by controlling which NGOs are permitted to participate.
+
+================================================================================
+
+2. SYSTEM ACTORS
+
+  Actor       | Description                                                                                        | Auto-Verified?
+  ------------|----------------------------------------------------------------------------------------------------|--------------------------
+  Admin       | Platform administrator. Manages NGO access. Seeded into the database at setup.                     | Yes
+  NGO         | A non-governmental organization. Can register freely, but requires Admin approval before accessing  | No (manual approval required)
+              | marketplace features.                                                                              |
+  Donor       | An individual contributor. Can register and donate to verified NGOs immediately.                    | Yes (upon registration)
+
+================================================================================
+
+3. AUTHENTICATION & SESSION MANAGEMENT
+
+3.1 Registration
+  - Any visitor can register as an NGO or Donor (role is chosen at registration time).
+  - Required fields for all users: name, email, password.
+  - Additional fields for NGOs only: description (mission), registrationId, contact (phone).
+  - Passwords must be at least 6 characters. They are hashed with bcrypt (salt rounds: 10) before storage.
+  - Donors are automatically marked isVerified: true upon registration.
+  - NGOs are marked isVerified: false and isRestricted: false upon registration.
+  - Each email must be unique across the system.
+
+3.2 Login
+  - Users log in with email and password.
+  - On success, the server returns a JWT (JSON Web Token) valid for 7 days.
+  - The token encodes the user's id and role.
+  - The frontend stores the token in localStorage and attaches it as a Bearer token to all subsequent API requests.
+
+3.3 Session Persistence
+  - On app load, the frontend verifies the stored token with GET /api/auth/me.
+  - If the token is invalid or expired, the user is silently logged out and redirected to /login.
+
+3.4 Role-Based Routing
+  - Upon successful login, users are redirected based on their role:
+      admin -> /admin
+      ngo   -> /ngo/dashboard
+      donor -> /donor/dashboard
+  - All protected routes check for a valid token. Wrong-role access redirects to /.
+
+================================================================================
+
+4. ADMIN FEATURES
+
+The Admin has no self-registration flow. The account is created through a one-time seed script.
+
+4.1 Admin Dashboard
+  The admin landing page shows four platform-wide statistics:
+    - Total NGOs registered
+    - Total Verified NGOs
+    - Total Listings created
+    - Total Donations value (in INR)
+
+4.2 NGO Management Table
+  Displays a list of all registered NGOs with the following columns:
+    - Organization name and description snippet
+    - Email
+    - Registration ID
+    - Current status (Verified / Pending badges, Restricted badge if applicable)
+    - Action buttons
+
+4.3 Verify / Unverify an NGO
+  - Admin can toggle an NGO's isVerified status with a single click.
+  - If isVerified is false -> clicking "Verify" sets it to true.
+  - If isVerified is true -> clicking "Unverify" sets it back to false.
+  - A newly unverified NGO immediately loses access to marketplace features (enforced server-side on every request).
+
+4.4 Restrict / Unrestrict an NGO
+  - Admin can toggle an NGO's isRestricted status.
+  - A restricted NGO is blocked from marketplace features even if isVerified is true.
+  - The restriction badge is shown alongside the verification status on the dashboard table.
+
+================================================================================
+
+5. NGO FEATURES
+
+  [IMPORTANT] All marketplace features (creating listings, requesting items, viewing/managing
+  requests) are BLOCKED by server-side middleware unless the NGO has isVerified: true AND
+  isRestricted: false.
+
+5.1 NGO Dashboard
+  Upon login, an NGO sees one of three views:
+    - Verification Pending Banner — if isVerified: false. Shows the NGO's profile details
+      (name, description, registration ID, contact) while they wait.
+    - Restricted Banner — if isRestricted: true. Informs the user to contact admin.
+    - Full Dashboard — if verified and not restricted. Shows stats and tabbed content.
+
+  Dashboard Stats (verified NGOs only):
+    - Total listings created by this NGO
+    - Pending incoming requests count
+    - Total value of donations received (in INR)
+
+  Dashboard Tabs:
+    - Requests — lists all incoming requests on the NGO's listings.
+    - Donation Ledger — table of all donations received.
+
+5.2 Create a Listing
+  A verified NGO can post a surplus item with the following fields:
+
+    Field         | Type    | Values / Constraints
+    --------------|---------|-----------------------------------------------------------
+    title         | String  | Required
+    description   | String  | Required
+    quantity      | Number  | Defaults to 1, minimum 1
+    category      | Enum    | food, clothing, medical, education, electronics, furniture, other
+    urgency       | Enum    | low, medium, high
+
+  On creation, the listing is assigned status: 'available' and linked to the creating NGO's ID.
+
+5.3 My Listings (History)
+  - A verified NGO can view all listings they have created, regardless of status.
+  - Listings can be filtered by status using tabs: All, Available, Pending, Claimed.
+  - Each card shows the item category emoji, title, description, quantity, urgency, date created, and status badge.
+
+5.4 Delete a Listing
+  - An NGO can delete one of their own listings only if its status is 'available'.
+  - Deleting a listing also automatically deletes all associated requests for that listing.
+
+5.5 Browse the Marketplace
+  - A verified NGO can view all 'available' listings from other NGOs (their own listings are excluded).
+  - Filters available: text search (on title and description), category, and urgency.
+  - Each card shows the item details and a "Request Item" button.
+
+5.6 Request an Item
+  - A verified NGO can request any 'available' listing they don't own.
+  - A modal appears prompting for an optional message to the listing owner.
+  - Business rules enforced server-side:
+      * The listing must still be 'available' (not yet pending or claimed).
+      * The requesting NGO cannot be the listing's owner.
+      * The requesting NGO cannot have an existing pending request for the same listing
+        (one request per NGO per listing).
+  - On successful request creation, the listing's status is automatically changed
+    from 'available' to 'pending'.
+
+5.7 Manage Incoming Requests (Accept / Reject)
+  Verified NGOs see all requests made on their listings in the Requests tab of the dashboard.
+
+  Each request card shows:
+    - The listing title it relates to
+    - The requesting NGO's name
+    - The optional message from the requester
+    - Current status badge (pending, accepted, rejected)
+    - Accept and Reject buttons (only shown for pending requests)
+
+  On Accept:
+    1. The request's status is set to 'accepted'.
+    2. The listing's status is set to 'claimed'.
+    3. All other pending requests for that same listing are automatically set to 'rejected'.
+
+  On Reject:
+    1. The request's status is set to 'rejected'.
+    2. If no other pending requests remain for that listing, the listing's status reverts to 'available'.
+
+================================================================================
+
+6. DONOR FEATURES
+
+Donors are automatically verified upon registration and can immediately access their features.
+
+6.1 Donor Dashboard
+  Shows three summary stats:
+    - Total amount donated (in INR)
+    - Total number of donations made
+    - Number of unique NGOs supported
+
+  Below the stats is a Donation History table with columns: NGO Name, Amount, Message, Date, Status.
+
+6.2 Explore NGOs
+  - Donors can browse all NGOs where isVerified: true AND isRestricted: false.
+  - A search bar filters NGOs by name or description/mission text.
+  - Each NGO card shows: name avatar (first letter), full name, description, email,
+    contact (if available), a Verified badge, and a Donate button.
+
+6.3 Make a Donation
+  - Clicking Donate on an NGO card opens a modal.
+  - The donor enters an amount (minimum 1 INR) and an optional message.
+  - Quick-select buttons are available for common amounts: 100, 500, 1000, 5000 INR.
+  - The donation flow is simulated (no real payment gateway). All donations are
+    immediately recorded with status: 'completed'.
+  - Business rules enforced server-side:
+      * The target NGO must exist, have role: 'ngo', and have isVerified: true.
+      * Amount must be at least 1.
+  - On success, a toast-style success message is shown and the donation history updates.
+
+================================================================================
+
+7. DATA MODELS (CURRENT SCHEMA)
+
+User
+  _id, role (ngo|donor|admin), email (unique), passwordHash,
+  isVerified (bool), isRestricted (bool),
+  profileDetails: { name, description, registrationId, contact },
+  createdAt, updatedAt
+
+Listing
+  _id, ownerNgoId (-> User), title, description, quantity,
+  category (food|clothing|medical|education|electronics|furniture|other),
+  urgency (low|medium|high),
+  status (available|pending|claimed),
+  createdAt, updatedAt
+
+Request
+  _id, listingId (-> Listing), requestingNgoId (-> User),
+  message, status (pending|accepted|rejected),
+  createdAt, updatedAt
+
+Donation
+  _id, donorId (-> User), ngoId (-> User), amount, message,
+  status (completed|failed),
+  createdAt, updatedAt
+
+================================================================================
+
+8. API ENDPOINTS SUMMARY
+
+Auth (/api/auth)
+  Method | Endpoint    | Access             | Description
+  -------|-------------|--------------------|------------------------------
+  POST   | /register   | Public             | Register new NGO or Donor
+  POST   | /login      | Public             | Login, returns JWT
+  GET    | /me         | Any authenticated  | Get current user's profile
+
+Admin (/api/admin) — Admin only
+  Method | Endpoint              | Description
+  -------|------------------------|------------------------------
+  GET    | /ngos                  | Get all registered NGOs
+  GET    | /stats                 | Get platform-wide stats
+  PUT    | /ngos/:id/verify       | Toggle NGO verification
+  PUT    | /ngos/:id/restrict     | Toggle NGO restriction
+
+Listings (/api/listings)
+  Method | Endpoint  | Access               | Description
+  -------|-----------|-----------------------|------------------------------
+  GET    | /         | Any authenticated     | Browse available listings (NGOs see others' only)
+  GET    | /mine     | Verified NGO          | Get own listings
+  POST   | /         | Verified NGO          | Create a listing
+  PUT    | /:id      | Verified NGO (owner)  | Update a listing
+  DELETE | /:id      | Verified NGO (owner)  | Delete a listing
+
+Requests (/api/requests) — Verified NGOs only
+  Method | Endpoint      | Description
+  -------|---------------|------------------------------
+  POST   | /             | Create a request for a listing
+  GET    | /incoming     | Get all requests made on own listings
+  GET    | /mine         | Get own outgoing requests
+  PUT    | /:id/accept   | Accept a request (owner only)
+  PUT    | /:id/reject   | Reject a request (owner only)
+
+NGOs (/api/ngos) — Any authenticated
+  Method | Endpoint  | Description
+  -------|-----------|------------------------------
+  GET    | /         | List all verified, non-restricted NGOs (with search)
+  GET    | /:id      | Get a single NGO's profile
+
+Donations (/api/donations)
+  Method | Endpoint   | Access      | Description
+  -------|------------|-------------|------------------------------
+  POST   | /          | Donor only  | Create a donation
+  GET    | /mine      | Donor only  | Get own donation history
+  GET    | /received  | NGO only    | Get donations received
+
+================================================================================
+
+9. BUSINESS RULES & CONSTRAINTS SUMMARY
+
+  #  | Rule
+  ---|---------------------------------------------------------------------
+  1  | Emails must be unique across all roles.
+  2  | NGOs start as unverified; donors start as verified.
+  3  | An unverified or restricted NGO cannot create/browse listings, request items, or view incoming requests.
+  4  | An NGO cannot request its own listing.
+  5  | An NGO cannot submit more than one pending request per listing.
+  6  | Only listings with status 'available' can be requested.
+  7  | Accepting a request claims the listing and auto-rejects all competing requests.
+  8  | Rejecting the last pending request on a listing resets the listing to 'available'.
+  9  | Only the listing owner can accept or reject requests on their listing.
+  10 | Donors can only donate to NGOs that are verified and not restricted.
+  11 | Minimum donation amount is 1 INR.
+  12 | Only available-status listings can be deleted by their owner.
+
+================================================================================
+
+10. KNOWN GAPS & FEATURES NOT YET IMPLEMENTED
+
+These features are not currently supported — they represent potential areas for future use cases or stories:
+
+  Gap                                | Notes
+  -----------------------------------|-----------------------------------------------------
+  Real payment gateway               | Donations are simulated. No Stripe/Razorpay integration exists.
+  NGO profile edit                   | NGOs cannot update their profile details (name, mission, contact) post-registration.
+  Listing edit                       | The PUT /listings/:id API exists but there is no UI to trigger it.
+  Notifications                      | No in-app notifications when a request is received, accepted, or rejected.
+  Donor cannot see NGO detail page   | The GET /api/ngos/:id endpoint exists but has no corresponding frontend page.
+  Admin cannot manage donors         | No UI for the admin to view or manage donor accounts.
+  Admin user management              | The GET /api/admin/users endpoint exists but is not surfaced in the UI.
+  Password reset / forgot password   | No email-based recovery flow.
+  NGO-to-NGO messaging               | Requesters can attach a one-time message to a request but there is no ongoing conversation.
+  Pagination                         | All list endpoints return all results (no pagination or infinite scroll).
+  File/image uploads                 | Listings have no photo attachment capability.
+  Analytics for NGO                  | No chart-based visualisation of activity over time.
