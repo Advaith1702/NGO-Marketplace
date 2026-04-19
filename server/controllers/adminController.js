@@ -108,3 +108,83 @@ exports.getStats = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// @desc    Get comprehensive admin dashboard analytics
+// @route   GET /api/admin/dashboard
+exports.getAdminDashboardStats = async (req, res) => {
+  try {
+    const Listing = require('../models/Listing');
+    const Donation = require('../models/Donation');
+
+    const [
+      totalNgos,
+      totalDonors,
+      topNgoAgg,
+      donationTrend,
+      listingsByCategory,
+      completedListings
+    ] = await Promise.all([
+      User.countDocuments({ role: 'ngo' }),
+      User.countDocuments({ role: 'donor' }),
+      Donation.aggregate([
+        { $match: { status: 'completed' } },
+        { $group: { _id: '$ngoId', totalDonations: { $sum: '$amount' } } },
+        { $sort: { totalDonations: -1 } },
+        { $limit: 1 }
+      ]),
+      Donation.aggregate([
+        { $match: { status: 'completed' } },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' }
+            },
+            total: { $sum: '$amount' }
+          }
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } }
+      ]),
+      Listing.aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]),
+      Listing.countDocuments({ status: 'claimed' })
+    ]);
+
+    let topNgo = null;
+    if (topNgoAgg.length > 0) {
+      const ngo = await User.findById(topNgoAgg[0]._id).select('profileDetails.name email');
+      if (ngo) {
+        topNgo = {
+          ngoId: ngo._id,
+          name: ngo.profileDetails?.name || 'Unknown',
+          totalDonations: topNgoAgg[0].totalDonations
+        };
+      }
+    }
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const formattedDonationTrend = donationTrend.map(item => ({
+      month: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+      total: item.total
+    }));
+
+    const formattedCategoryChart = listingsByCategory.map(item => ({
+      category: item._id.charAt(0).toUpperCase() + item._id.slice(1),
+      count: item.count
+    }));
+
+    res.json({
+      totalNgos,
+      totalDonors,
+      topNgo,
+      donationTrend: formattedDonationTrend,
+      listingsByCategory: formattedCategoryChart,
+      completedListings
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

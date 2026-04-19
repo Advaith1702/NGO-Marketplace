@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { getNgos, getAllUsers, verifyNgo, restrictNgo, getStats } = require('../controllers/adminController');
+const { getNgos, getAllUsers, verifyNgo, restrictNgo, getStats, getAdminDashboardStats } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
 router.use(protect, authorize('admin'));
 
+router.get('/dashboard', getAdminDashboardStats);
 router.get('/ngos', getNgos);
 router.get('/users', getAllUsers);
 router.get('/stats', getStats);

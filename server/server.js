@@ -22,6 +22,7 @@ app.use('/api/listings', require('./routes/listings'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/donations', require('./routes/donations'));
 app.use('/api/ngos', require('./routes/ngos'));
+app.use('/api/ngo', require('./routes/ngo'));
 
 // Health check
 app.get('/api/health', (req, res) => {

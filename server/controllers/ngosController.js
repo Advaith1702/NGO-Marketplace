@@ -70,3 +70,64 @@ exports.getNgo = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// @desc    Get dashboard analytics for logged-in NGO
+// @route   GET /api/ngo/dashboard
+exports.getNgoDashboardStats = async (req, res) => {
+  try {
+    const ngoId = req.user._id;
+
+    const [
+      totalAmountAgg,
+      donationTrend,
+      totalListings,
+      listingsByStatus
+    ] = await Promise.all([
+      Donation.aggregate([
+        { $match: { ngoId: ngoId, status: 'completed' } },
+        { $group: { _id: null, totalReceived: { $sum: '$amount' } } }
+      ]),
+      Donation.aggregate([
+        { $match: { ngoId: ngoId, status: 'completed' } },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' }
+            },
+            total: { $sum: '$amount' }
+          }
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } }
+      ]),
+      Listing.countDocuments({ ownerNgoId: ngoId }),
+      Listing.aggregate([
+        { $match: { ownerNgoId: ngoId } },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ])
+    ]);
+
+    const totalReceived = totalAmountAgg.length > 0 ? totalAmountAgg[0].totalReceived : 0;
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const formattedDonationTrend = donationTrend.map(item => ({
+      month: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+      total: item.total
+    }));
+
+    const formattedStatusChart = listingsByStatus.map(item => ({
+      status: item._id.charAt(0).toUpperCase() + item._id.slice(1),
+      count: item.count
+    }));
+
+    res.json({
+      totalReceived,
+      totalListings,
+      donationTrend: formattedDonationTrend,
+      listingsByStatus: formattedStatusChart
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

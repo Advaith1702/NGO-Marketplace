@@ -17,5 +17,18 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Project State Documents
+# Build output
+dist/
+build/
+
+# Mock data & temp scripts
+*.exported.json
+*_exported.json
+fix-*.js
+export-*.js
+Project_State.txt
 Detailed_Project_Analysis.txt
+
+# IDE
+.vscode/
+.idea/

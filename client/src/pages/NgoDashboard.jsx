@@ -1,28 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getMyListings, getIncomingRequests, getReceivedDonations, acceptRequest, rejectRequest } from '../api';
+import { getMyListings, getIncomingRequests, getReceivedDonations, acceptRequest, rejectRequest, getNgoDashboardAnalytics } from '../api';
 import { Link } from 'react-router-dom';
 import { HiOutlinePlus, HiOutlineClipboardList, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineExclamation } from 'react-icons/hi';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const NgoDashboard = () => {
   const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [requests, setRequests] = useState([]);
   const [donations, setDonations] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
   const fetchData = async () => {
     try {
       if (user.isVerified && !user.isRestricted) {
-        const [listRes, reqRes, donRes] = await Promise.all([
+        const [listRes, reqRes, donRes, statsRes] = await Promise.all([
           getMyListings(),
           getIncomingRequests(),
           getReceivedDonations(),
+          getNgoDashboardAnalytics(),
         ]);
         setListings(listRes.data);
         setRequests(reqRes.data);
         setDonations(donRes.data);
+        setStats(statsRes.data);
       }
     } catch (err) {
       console.error(err);
@@ -146,6 +150,39 @@ const NgoDashboard = () => {
 
       {activeTab === 'overview' && (
         <div className="section">
+          {stats && (
+            <div className="charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
+              <div className="chart-card glass-card" style={{ padding: '1.5rem', borderRadius: '12px' }}>
+                <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Donation Trend</h3>
+                <div style={{ height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.donationTrend}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="month" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-glass)' }} />
+                      <Line type="monotone" dataKey="total" stroke="var(--accent-green)" strokeWidth={3} dot={{ fill: 'var(--accent-green)', r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="chart-card glass-card" style={{ padding: '1.5rem', borderRadius: '12px' }}>
+                <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Listings by Status</h3>
+                <div style={{ height: '250px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stats.listingsByStatus}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="status" stroke="var(--text-secondary)" />
+                      <YAxis stroke="var(--text-secondary)" allowDecimals={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-glass)' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                      <Bar dataKey="count" fill="var(--accent-blue)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
           <h2>Incoming Requests {pendingRequests.length > 0 && <span className="count-badge">{pendingRequests.length}</span>}</h2>
           {requests.length === 0 ? (
             <div className="empty-card">

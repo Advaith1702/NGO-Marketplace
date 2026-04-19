@@ -21,6 +21,7 @@ export const getMe = () => API.get('/auth/me');
 // Admin
 export const getAdminNgos = () => API.get('/admin/ngos');
 export const getAdminStats = () => API.get('/admin/stats');
+export const getAdminDashboardAnalytics = () => API.get('/admin/dashboard');
 export const verifyNgo = (id) => API.put(`/admin/ngos/${id}/verify`);
 export const restrictNgo = (id) => API.put(`/admin/ngos/${id}/restrict`);
 
@@ -38,9 +39,10 @@ export const getMyRequests = () => API.get('/requests/mine');
 export const acceptRequest = (id) => API.put(`/requests/${id}/accept`);
 export const rejectRequest = (id) => API.put(`/requests/${id}/reject`);
 
-// NGOs (public)
+// NGOs (public & private)
 export const getVerifiedNgos = (params) => API.get('/ngos', { params });
 export const getNgo = (id) => API.get(`/ngos/${id}`);
+export const getNgoDashboardAnalytics = () => API.get('/ngo/dashboard');
 
 // Donations
 export const createDonation = (data) => API.post('/donations', data);
