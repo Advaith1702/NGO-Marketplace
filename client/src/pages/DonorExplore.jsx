@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react';
-import { getVerifiedNgos, createDonation, getMyDonations } from '../api';
-import { HiOutlineSearch, HiOutlineHeart, HiOutlineCurrencyDollar, HiOutlineClipboardList } from 'react-icons/hi';
+import { useNavigate } from 'react-router-dom';
+import { getVerifiedNgos, createDonation } from '../api';
+import { HiOutlineSearch, HiOutlineHeart, HiOutlineEye, HiOutlineFilter } from 'react-icons/hi';
+
+const NGO_CATEGORIES = ['Healthcare', 'Education', 'Environment', 'Food Relief', 'Others'];
 
 const DonorExplore = () => {
   const [ngos, setNgos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedNgo, setSelectedNgo] = useState(null);
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [donating, setDonating] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const fetchNgos = async () => {
     try {
-      const { data } = await getVerifiedNgos({ search });
+      const params = {};
+      if (search) params.search = search;
+      if (category) params.category = category;
+      const { data } = await getVerifiedNgos(params);
       setNgos(data);
     } catch (err) {
       console.error(err);
@@ -31,6 +39,19 @@ const DonorExplore = () => {
     setLoading(true);
     fetchNgos();
   };
+
+  const handleCategoryChange = (e) => {
+    setCategory(e.target.value);
+    setLoading(true);
+    // We need to call fetchNgos after state update, so use a small trick
+    setTimeout(() => {}, 0);
+  };
+
+  // Re-fetch when category changes
+  useEffect(() => {
+    setLoading(true);
+    fetchNgos();
+  }, [category]);
 
   const openDonateModal = (ngo) => {
     setSelectedNgo(ngo);
@@ -69,11 +90,25 @@ const DonorExplore = () => {
             <HiOutlineSearch className="input-icon" />
             <input type="text" placeholder="Search NGOs..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
+          <div className="input-wrapper category-select-wrapper">
+            <HiOutlineFilter className="input-icon" />
+            <select
+              id="category-filter"
+              value={category}
+              onChange={handleCategoryChange}
+              className="category-select"
+            >
+              <option value="">All Categories</option>
+              {NGO_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
           <button type="submit" className="btn btn-primary">Search</button>
         </form>
       </div>
       {ngos.length === 0 ? (
-        <div className="empty-card"><h3>No NGOs found</h3></div>
+        <div className="empty-card"><h3>No NGOs found</h3><p>Try adjusting your search or category filter.</p></div>
       ) : (
         <div className="card-grid">
           {ngos.map((ngo) => (
@@ -81,10 +116,20 @@ const DonorExplore = () => {
               <div className="ngo-avatar">{ngo.profileDetails?.name?.charAt(0)?.toUpperCase()}</div>
               <h3>{ngo.profileDetails?.name}</h3>
               <p className="ngo-desc">{ngo.profileDetails?.description || 'No description.'}</p>
-              <span className="badge badge-success">✓ Verified</span>
-              <button className="btn btn-primary btn-full" onClick={() => openDonateModal(ngo)}>
-                <HiOutlineHeart /> Donate
-              </button>
+              <div className="ngo-card-badges">
+                <span className="badge badge-success">✓ Verified</span>
+                {ngo.profileDetails?.category && (
+                  <span className="badge badge-category">{ngo.profileDetails.category}</span>
+                )}
+              </div>
+              <div className="ngo-card-actions">
+                <button className="btn btn-primary" onClick={() => openDonateModal(ngo)}>
+                  <HiOutlineHeart /> Donate
+                </button>
+                <button className="btn btn-outline" onClick={() => navigate(`/ngo/${ngo._id}`)}>
+                  <HiOutlineEye /> View Profile
+                </button>
+              </div>
             </div>
           ))}
         </div>

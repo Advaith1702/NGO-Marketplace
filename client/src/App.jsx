@@ -11,6 +11,7 @@ import MyListings from './pages/MyListings';
 import CreateListing from './pages/CreateListing';
 import DonorDashboard from './pages/DonorDashboard';
 import DonorExplore from './pages/DonorExplore';
+import NgoProfile from './pages/NgoProfile';
 import './index.css';
 
 const HomeRedirect = () => {
@@ -42,6 +43,7 @@ function App() {
             <Route path="/ngo/create-listing" element={<ProtectedRoute roles={['ngo']}><CreateListing /></ProtectedRoute>} />
             <Route path="/donor/dashboard" element={<ProtectedRoute roles={['donor']}><DonorDashboard /></ProtectedRoute>} />
             <Route path="/donor/explore" element={<ProtectedRoute roles={['donor']}><DonorExplore /></ProtectedRoute>} />
+            <Route path="/ngo/:id" element={<ProtectedRoute roles={['donor', 'ngo', 'admin']}><NgoProfile /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

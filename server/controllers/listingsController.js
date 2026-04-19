@@ -31,11 +31,14 @@ exports.createListing = async (req, res) => {
 // @route   GET /api/listings
 exports.getListings = async (req, res) => {
   try {
-    const { search, category, urgency } = req.query;
+    const { search, category, urgency, ownerNgoId } = req.query;
     const filter = { status: 'available' };
 
-    // Exclude own listings if the user is an NGO
-    if (req.user.role === 'ngo') {
+    if (ownerNgoId) {
+      // Filter listings by a specific NGO (used on NGO profile page)
+      filter.ownerNgoId = ownerNgoId;
+    } else if (req.user.role === 'ngo') {
+      // Exclude own listings if the user is an NGO
       filter.ownerNgoId = { $ne: req.user._id };
     }
 

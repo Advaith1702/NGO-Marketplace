@@ -9,7 +9,7 @@ const generateToken = (id, role) => {
 // @route   POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { email, password, role, name, description, registrationId, contact } = req.body;
+    const { email, password, role, name, description, registrationId, contact, category } = req.body;
 
     if (!email || !password || !role || !name) {
       return res.status(400).json({ message: 'Please provide email, password, role and name' });
@@ -34,6 +34,7 @@ exports.register = async (req, res) => {
         description: description || '',
         registrationId: registrationId || '',
         contact: contact || '',
+        category: category || '',
       },
     });
 

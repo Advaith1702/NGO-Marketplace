@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getAdminNgos, getAdminStats, verifyNgo, restrictNgo } from '../api';
 import { HiOutlineCheckCircle, HiOutlineBan, HiOutlineShieldCheck, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineCurrencyDollar } from 'react-icons/hi';
 
@@ -127,7 +128,7 @@ const AdminDashboard = () => {
                   <tr key={ngo._id}>
                     <td>
                       <div className="table-user">
-                        <span className="table-user-name">{ngo.profileDetails?.name}</span>
+                        <Link to={`/ngo/${ngo._id}`} className="ngo-link"><span className="table-user-name">{ngo.profileDetails?.name}</span></Link>
                         <span className="table-user-desc">{ngo.profileDetails?.description?.substring(0, 50)}</span>
                       </div>
                     </td>

@@ -157,7 +157,7 @@ const NgoDashboard = () => {
                 <div key={req._id} className={`request-card glass-card status-${req.status}`}>
                   <div className="request-info">
                     <h4>{req.listingId?.title || 'Listing'}</h4>
-                    <p className="request-from">From: <strong>{req.requestingNgoId?.profileDetails?.name}</strong></p>
+                    <p className="request-from">From: <Link to={`/ngo/${req.requestingNgoId?._id}`} className="ngo-link"><strong>{req.requestingNgoId?.profileDetails?.name}</strong></Link></p>
                     {req.message && <p className="request-message">"{req.message}"</p>}
                     <span className={`badge badge-${req.status === 'pending' ? 'warning' : req.status === 'accepted' ? 'success' : 'danger'}`}>
                       {req.status}

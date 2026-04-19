@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getListings, createRequest } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { HiOutlineSearch, HiOutlineClock, HiOutlineTag, HiOutlineHand } from 'react-icons/hi';
@@ -142,7 +143,7 @@ const Marketplace = () => {
               <p className="listing-desc">{listing.description}</p>
               <div className="listing-meta">
                 <span><HiOutlineTag /> Qty: {listing.quantity}</span>
-                <span>By: {listing.ownerNgoId?.profileDetails?.name}</span>
+                <span>By: <Link to={`/ngo/${listing.ownerNgoId?._id}`} className="ngo-link">{listing.ownerNgoId?.profileDetails?.name}</Link></span>
               </div>
               {user.role === 'ngo' && (
                 <button

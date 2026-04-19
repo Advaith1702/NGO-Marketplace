@@ -96,7 +96,7 @@ const DonorDashboard = () => {
               <tbody>
                 {donations.map((d) => (
                   <tr key={d._id}>
-                    <td>{d.ngoId?.profileDetails?.name || 'Unknown'}</td>
+                    <td><Link to={`/ngo/${d.ngoId?._id}`} className="ngo-link">{d.ngoId?.profileDetails?.name || 'Unknown'}</Link></td>
                     <td className="amount">₹{d.amount.toLocaleString()}</td>
                     <td>{d.message || '—'}</td>
                     <td>{new Date(d.createdAt).toLocaleDateString()}</td>

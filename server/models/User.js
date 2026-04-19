@@ -32,10 +32,15 @@ const userSchema = new mongoose.Schema(
       description: { type: String, default: '' },
       registrationId: { type: String, default: '' },
       contact: { type: String, default: '' },
+      category: { type: String, default: '' },
     },
   },
   { timestamps: true }
 );
+
+// Indexes for optimized search and filtering
+userSchema.index({ 'profileDetails.name': 1 });
+userSchema.index({ 'profileDetails.category': 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

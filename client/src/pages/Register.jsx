@@ -13,6 +13,7 @@ const Register = () => {
     description: '',
     registrationId: '',
     contact: '',
+    category: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,7 @@ const Register = () => {
         description: formData.description,
         registrationId: formData.registrationId,
         contact: formData.contact,
+        category: formData.category,
       });
       switch (data.role) {
         case 'ngo':
@@ -142,6 +144,23 @@ const Register = () => {
                     onChange={handleChange}
                     rows={3}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="category">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select a category</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Education">Education</option>
+                    <option value="Environment">Environment</option>
+                    <option value="Food Relief">Food Relief</option>
+                    <option value="Others">Others</option>
+                  </select>
                 </div>
 
                 <div className="form-row">
