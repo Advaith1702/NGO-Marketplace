@@ -37,7 +37,15 @@ exports.verifyNgo = async (req, res) => {
       return res.status(404).json({ message: 'NGO not found' });
     }
 
-    ngo.isVerified = !ngo.isVerified;
+    if (ngo.pendingReverification) {
+      ngo.isVerified = true;
+      ngo.pendingReverification = false;
+    } else {
+      ngo.isVerified = !ngo.isVerified;
+      if (!ngo.isVerified) {
+        ngo.pendingReverification = false;
+      }
+    }
     await ngo.save();
 
     res.json({
@@ -45,6 +53,7 @@ exports.verifyNgo = async (req, res) => {
       email: ngo.email,
       isVerified: ngo.isVerified,
       isRestricted: ngo.isRestricted,
+      pendingReverification: ngo.pendingReverification,
       profileDetails: ngo.profileDetails,
     });
   } catch (error) {
@@ -70,6 +79,7 @@ exports.restrictNgo = async (req, res) => {
       email: ngo.email,
       isVerified: ngo.isVerified,
       isRestricted: ngo.isRestricted,
+      pendingReverification: ngo.pendingReverification,
       profileDetails: ngo.profileDetails,
     });
   } catch (error) {

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getMyListings, getIncomingRequests, getReceivedDonations, acceptRequest, rejectRequest, getNgoDashboardAnalytics } from '../api';
 import { Link } from 'react-router-dom';
-import { HiOutlinePlus, HiOutlineClipboardList, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineExclamation } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlineClipboardList, HiOutlineBell, HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineExclamation } from 'react-icons/hi';
+import { FaIndianRupeeSign } from 'react-icons/fa6';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const NgoDashboard = () => {
@@ -134,7 +135,7 @@ const NgoDashboard = () => {
         </div>
         <div className="stat-card">
           <div className="stat-icon green">
-            <HiOutlineCurrencyDollar />
+            <FaIndianRupeeSign />
           </div>
           <div className="stat-info">
             <span className="stat-value">₹{totalDonations.toLocaleString()}</span>

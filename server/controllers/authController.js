@@ -46,6 +46,7 @@ exports.register = async (req, res) => {
       role: user.role,
       isVerified: user.isVerified,
       isRestricted: user.isRestricted,
+      pendingReverification: user.pendingReverification,
       profileDetails: user.profileDetails,
       token,
     });
@@ -83,6 +84,7 @@ exports.login = async (req, res) => {
       role: user.role,
       isVerified: user.isVerified,
       isRestricted: user.isRestricted,
+      pendingReverification: user.pendingReverification,
       profileDetails: user.profileDetails,
       token,
     });
@@ -101,6 +103,7 @@ exports.getMe = async (req, res) => {
     role: req.user.role,
     isVerified: req.user.isVerified,
     isRestricted: req.user.isRestricted,
+    pendingReverification: req.user.pendingReverification,
     profileDetails: req.user.profileDetails,
   });
 };

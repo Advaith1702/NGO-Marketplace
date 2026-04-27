@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAdminNgos, getAdminDashboardAnalytics, verifyNgo, restrictNgo } from '../api';
-import { HiOutlineCheckCircle, HiOutlineBan, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineHeart, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineBan, HiOutlineUserGroup, HiOutlineClipboardList, HiOutlineHeart } from 'react-icons/hi';
+import { FaIndianRupeeSign } from 'react-icons/fa6';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
@@ -9,6 +10,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     try {
@@ -58,6 +60,23 @@ const AdminDashboard = () => {
     );
   }
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredNgos = ngos.filter((ngo) => {
+    if (!normalizedSearch) return true;
+    const name = ngo.profileDetails?.name?.toLowerCase() || '';
+    const email = ngo.email?.toLowerCase() || '';
+    const registrationId = ngo.profileDetails?.registrationId?.toLowerCase() || '';
+    return (
+      name.includes(normalizedSearch) ||
+      email.includes(normalizedSearch) ||
+      registrationId.includes(normalizedSearch)
+    );
+  });
+  const sortedNgos = [...filteredNgos].sort((a, b) => {
+    if (a.pendingReverification === b.pendingReverification) return 0;
+    return a.pendingReverification ? -1 : 1;
+  });
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-header">
@@ -91,7 +110,7 @@ const AdminDashboard = () => {
             </div>
             {stats.topNgo && (
               <div className="stat-card">
-                <div className="stat-icon amber"><HiOutlineCurrencyDollar /></div>
+                <div className="stat-icon amber"><FaIndianRupeeSign /></div>
                 <div className="stat-info">
                   <span className="stat-value">₹{stats.topNgo.totalDonations.toLocaleString()}</span>
                   <span className="stat-label">Top NGO: {stats.topNgo.name}</span>
@@ -136,6 +155,18 @@ const AdminDashboard = () => {
 
       <div className="section">
         <h2>NGO Management</h2>
+        <div className="filter-bar glass-card" style={{ marginBottom: '1rem' }}>
+          <form className="search-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="input-wrapper">
+              <input
+                type="text"
+                placeholder="Search by NGO name, email, or registration ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </form>
+        </div>
         <div className="table-container">
           <table className="data-table">
             <thead>
@@ -148,12 +179,14 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {ngos.length === 0 ? (
+              {filteredNgos.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="empty-state">No NGOs registered yet</td>
+                  <td colSpan={5} className="empty-state">
+                    {ngos.length === 0 ? 'No NGOs registered yet' : 'No NGOs match your search'}
+                  </td>
                 </tr>
               ) : (
-                ngos.map((ngo) => (
+                sortedNgos.map((ngo) => (
                   <tr key={ngo._id}>
                     <td>
                       <div className="table-user">
@@ -170,6 +203,9 @@ const AdminDashboard = () => {
                         ) : (
                           <span className="badge badge-warning">Pending</span>
                         )}
+                        {ngo.pendingReverification && (
+                          <span className="badge badge-info">Reverification Pending</span>
+                        )}
                         {ngo.isRestricted && (
                           <span className="badge badge-danger">Restricted</span>
                         )}
@@ -178,12 +214,12 @@ const AdminDashboard = () => {
                     <td>
                       <div className="action-buttons">
                         <button
-                          className={`btn btn-sm ${ngo.isVerified ? 'btn-outline' : 'btn-success'}`}
+                          className={`btn btn-sm ${ngo.pendingReverification ? 'btn-primary' : ngo.isVerified ? 'btn-outline' : 'btn-success'}`}
                           onClick={() => handleVerify(ngo._id)}
                           disabled={actionLoading === ngo._id + '-verify'}
                         >
                           <HiOutlineCheckCircle />
-                          {ngo.isVerified ? 'Unverify' : 'Verify'}
+                          {ngo.pendingReverification ? 'Reverify' : ngo.isVerified ? 'Unverify' : 'Verify'}
                         </button>
                         <button
                           className={`btn btn-sm ${ngo.isRestricted ? 'btn-warning' : 'btn-danger'}`}

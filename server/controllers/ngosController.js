@@ -71,6 +71,63 @@ exports.getNgo = async (req, res) => {
   }
 };
 
+// @desc    Update current NGO profile and trigger reverification
+// @route   PUT /api/ngos/me
+exports.updateMyNgoProfile = async (req, res) => {
+  try {
+    const { description, registrationId, contact, category } = req.body;
+    const ngo = await User.findById(req.user._id);
+
+    if (!ngo || ngo.role !== 'ngo') {
+      return res.status(404).json({ message: 'NGO not found' });
+    }
+
+    const currentProfile = ngo.profileDetails || {};
+    const updates = {
+      name: currentProfile.name || '',
+      description: description !== undefined ? String(description).trim() : (currentProfile.description || ''),
+      registrationId: registrationId !== undefined ? String(registrationId).trim() : (currentProfile.registrationId || ''),
+      contact: contact !== undefined ? String(contact).trim() : (currentProfile.contact || ''),
+      category: category !== undefined ? String(category).trim() : (currentProfile.category || ''),
+    };
+
+    const hasProfileChanges =
+      updates.name !== (ngo.profileDetails.name || '') ||
+      updates.description !== (ngo.profileDetails.description || '') ||
+      updates.registrationId !== (ngo.profileDetails.registrationId || '') ||
+      updates.contact !== (ngo.profileDetails.contact || '') ||
+      updates.category !== (ngo.profileDetails.category || '');
+
+    ngo.profileDetails.description = updates.description;
+    ngo.profileDetails.registrationId = updates.registrationId;
+    ngo.profileDetails.contact = updates.contact;
+    ngo.profileDetails.category = updates.category;
+
+    if (hasProfileChanges) {
+      ngo.isVerified = false;
+      ngo.pendingReverification = true;
+    }
+
+    await ngo.save();
+
+    res.json({
+      _id: ngo._id,
+      email: ngo.email,
+      role: ngo.role,
+      isVerified: ngo.isVerified,
+      isRestricted: ngo.isRestricted,
+      pendingReverification: ngo.pendingReverification,
+      profileDetails: ngo.profileDetails,
+      message: hasProfileChanges
+        ? 'Profile updated. Your NGO is now pending admin reverification.'
+        : 'No profile changes detected.',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Get dashboard analytics for logged-in NGO
 // @route   GET /api/ngo/dashboard
 exports.getNgoDashboardStats = async (req, res) => {

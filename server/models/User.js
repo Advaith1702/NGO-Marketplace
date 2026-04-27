@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    pendingReverification: {
+      type: Boolean,
+      default: false,
+    },
     profileDetails: {
       name: { type: String, required: true },
       description: { type: String, default: '' },

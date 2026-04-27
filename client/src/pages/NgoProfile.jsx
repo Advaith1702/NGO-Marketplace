@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getNgo, createDonation, getListings } from '../api';
+import { getNgo, createDonation, getListings, updateMyNgoProfile } from '../api';
+import { useAuth } from '../context/AuthContext';
 import {
   HiOutlineHeart,
   HiOutlineMail,
@@ -11,9 +12,13 @@ import {
   HiOutlineBadgeCheck,
   HiOutlineTag,
   HiOutlineArrowLeft,
+  HiOutlinePencil,
 } from 'react-icons/hi';
 
 const NgoProfile = () => {
+  const MAX_DONATION_AMOUNT = 10000000;
+  const NGO_CATEGORIES = ['Healthcare', 'Education', 'Environment', 'Food Relief', 'Others'];
+  const { user, refreshUser } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [ngo, setNgo] = useState(null);
@@ -27,6 +32,16 @@ const NgoProfile = () => {
   const [message, setMessage] = useState('');
   const [donating, setDonating] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    registrationId: '',
+    contact: '',
+    category: '',
+  });
 
   useEffect(() => {
     const fetchNgo = async () => {
@@ -56,19 +71,65 @@ const NgoProfile = () => {
     setShowModal(true);
   };
 
+  const openEditModal = () => {
+    setEditError('');
+    setEditForm({
+      name: ngo?.profileDetails?.name || '',
+      description: ngo?.profileDetails?.description || '',
+      registrationId: ngo?.profileDetails?.registrationId || '',
+      contact: ngo?.profileDetails?.contact || '',
+      category: ngo?.profileDetails?.category || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editForm.name.trim()) {
+      setEditError('Organization name is required');
+      return;
+    }
+
+    setEditing(true);
+    setEditError('');
+    try {
+      await updateMyNgoProfile({
+        description: editForm.description,
+        registrationId: editForm.registrationId,
+        contact: editForm.contact,
+        category: editForm.category,
+      });
+
+      const [{ data: refreshedNgo }] = await Promise.all([
+        getNgo(id),
+        refreshUser(),
+      ]);
+
+      setNgo(refreshedNgo);
+      setShowEditModal(false);
+      setSuccessMsg('Profile updated successfully. Your account is now pending admin reverification.');
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setEditing(false);
+    }
+  };
+
   const handleDonate = async () => {
-    if (!amount || parseFloat(amount) < 1) return alert('Enter a valid amount');
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount < 1) return alert('Enter a valid amount');
+    if (numericAmount > MAX_DONATION_AMOUNT) return alert(`Maximum donation is ₹${MAX_DONATION_AMOUNT.toLocaleString('en-IN')}`);
     setDonating(true);
     try {
-      await createDonation({ ngoId: ngo._id, amount: parseFloat(amount), message });
+      await createDonation({ ngoId: ngo._id, amount: numericAmount, message });
       setShowModal(false);
-      setSuccessMsg(`Donated ₹${parseFloat(amount).toLocaleString()} to ${ngo.profileDetails?.name}!`);
+      setSuccessMsg(`Donated ₹${numericAmount.toLocaleString()} to ${ngo.profileDetails?.name}!`);
       // Update stats locally
       setNgo((prev) => ({
         ...prev,
         stats: {
           ...prev.stats,
-          totalDonations: (prev.stats?.totalDonations || 0) + parseFloat(amount),
+          totalDonations: (prev.stats?.totalDonations || 0) + numericAmount,
         },
       }));
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -96,6 +157,8 @@ const NgoProfile = () => {
 
   const profile = ngo.profileDetails || {};
   const stats = ngo.stats || {};
+  const canDonate = user?.role === 'donor';
+  const isOwnNgoProfile = user?.role === 'ngo' && user?._id === id;
 
   return (
     <div className="dashboard-page ngo-profile-page">
@@ -116,6 +179,9 @@ const NgoProfile = () => {
             <h1>{profile.name}</h1>
             {ngo.isVerified && (
               <span className="badge badge-success"><HiOutlineBadgeCheck /> Verified</span>
+            )}
+            {!ngo.isVerified && ngo.pendingReverification && (
+              <span className="badge badge-warning">Awaiting Reverification</span>
             )}
             {ngo.isRestricted && (
               <span className="badge badge-danger">Restricted</span>
@@ -163,11 +229,20 @@ const NgoProfile = () => {
       </div>
 
       {/* Action buttons */}
-      <div className="ngo-profile-actions">
-        <button className="btn btn-primary btn-lg" onClick={openDonateModal}>
-          <HiOutlineHeart /> Donate to {profile.name}
-        </button>
-      </div>
+      {(canDonate || isOwnNgoProfile) && (
+        <div className="ngo-profile-actions">
+          {canDonate && (
+            <button className="btn btn-primary btn-lg" onClick={openDonateModal}>
+              <HiOutlineHeart /> Donate to {profile.name}
+            </button>
+          )}
+          {isOwnNgoProfile && (
+            <button className="btn btn-outline btn-lg" onClick={openEditModal}>
+              <HiOutlinePencil /> Edit Profile
+            </button>
+          )}
+        </div>
+      )}
 
       {/* NGO Listings */}
       {listings.length > 0 && (
@@ -194,13 +269,13 @@ const NgoProfile = () => {
       )}
 
       {/* Donate Modal */}
-      {showModal && (
+      {canDonate && showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal glass-card" onClick={(e) => e.stopPropagation()}>
             <h2>Donate to {profile.name}</h2>
             <div className="form-group">
               <label>Amount (₹)</label>
-              <input type="number" min="1" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <input type="number" min="1" max={MAX_DONATION_AMOUNT} placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div className="quick-amounts">
               {[100, 500, 1000, 5000].map((a) => (
@@ -217,6 +292,72 @@ const NgoProfile = () => {
                 {donating ? 'Processing...' : `Donate ₹${amount || '0'}`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      {isOwnNgoProfile && showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal glass-card" onClick={(e) => e.stopPropagation()}>
+            <h2>Edit NGO Profile</h2>
+            {editError && <div className="alert alert-error">{editError}</div>}
+            <div className="form-group">
+              <label>Organization Name</label>
+              <input
+                type="text"
+                value={editForm.name}
+                disabled
+                readOnly
+              />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                rows={3}
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Category</label>
+              <select
+                value={editForm.category}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
+              >
+                <option value="">Select category</option>
+                {NGO_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Registration ID</label>
+              <input
+                type="text"
+                value={editForm.registrationId}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, registrationId: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Contact</label>
+              <input
+                type="text"
+                value={editForm.contact}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, contact: e.target.value }))}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-outline" onClick={() => setShowEditModal(false)} disabled={editing}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleEditSave} disabled={editing}>
+                {editing ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+            <p className="auth-note">
+              Updating profile details requires admin approval. Your NGO will be marked unverified until reapproved.
+            </p>
           </div>
         </div>
       )}

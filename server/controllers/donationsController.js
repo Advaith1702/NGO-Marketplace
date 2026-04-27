@@ -1,5 +1,6 @@
 const Donation = require('../models/Donation');
 const User = require('../models/User');
+const MAX_DONATION_AMOUNT = 10000000;
 
 // @desc    Create a donation
 // @route   POST /api/donations
@@ -13,6 +14,9 @@ exports.createDonation = async (req, res) => {
 
     if (amount < 1) {
       return res.status(400).json({ message: 'Amount must be at least 1' });
+    }
+    if (amount > MAX_DONATION_AMOUNT) {
+      return res.status(400).json({ message: `Amount cannot exceed ₹${MAX_DONATION_AMOUNT.toLocaleString('en-IN')}` });
     }
 
     // Verify NGO exists and is verified

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getMyDonations } from '../api';
 import { Link } from 'react-router-dom';
-import { HiOutlineHeart, HiOutlineCurrencyDollar, HiOutlineClipboardList } from 'react-icons/hi';
+import { HiOutlineHeart, HiOutlineClipboardList } from 'react-icons/hi';
+import { FaIndianRupeeSign } from 'react-icons/fa6';
 
 const DonorDashboard = () => {
   const [donations, setDonations] = useState([]);
@@ -42,7 +43,7 @@ const DonorDashboard = () => {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon green">
-            <HiOutlineCurrencyDollar />
+            <FaIndianRupeeSign />
           </div>
           <div className="stat-info">
             <span className="stat-value">₹{totalDonated.toLocaleString()}</span>

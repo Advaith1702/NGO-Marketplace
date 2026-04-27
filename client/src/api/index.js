@@ -42,6 +42,7 @@ export const rejectRequest = (id) => API.put(`/requests/${id}/reject`);
 // NGOs (public & private)
 export const getVerifiedNgos = (params) => API.get('/ngos', { params });
 export const getNgo = (id) => API.get(`/ngos/${id}`);
+export const updateMyNgoProfile = (data) => API.put('/ngos/me', data);
 export const getNgoDashboardAnalytics = () => API.get('/ngo/dashboard');
 
 // Donations

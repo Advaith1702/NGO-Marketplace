@@ -4,6 +4,7 @@ import { getVerifiedNgos, createDonation } from '../api';
 import { HiOutlineSearch, HiOutlineHeart, HiOutlineEye, HiOutlineFilter } from 'react-icons/hi';
 
 const NGO_CATEGORIES = ['Healthcare', 'Education', 'Environment', 'Food Relief', 'Others'];
+const MAX_DONATION_AMOUNT = 10000000;
 
 const DonorExplore = () => {
   const [ngos, setNgos] = useState([]);
@@ -61,12 +62,14 @@ const DonorExplore = () => {
   };
 
   const handleDonate = async () => {
-    if (!amount || parseFloat(amount) < 1) return alert('Enter a valid amount');
+    const numericAmount = parseFloat(amount);
+    if (!numericAmount || numericAmount < 1) return alert('Enter a valid amount');
+    if (numericAmount > MAX_DONATION_AMOUNT) return alert(`Maximum donation is ₹${MAX_DONATION_AMOUNT.toLocaleString('en-IN')}`);
     setDonating(true);
     try {
-      await createDonation({ ngoId: selectedNgo._id, amount: parseFloat(amount), message });
+      await createDonation({ ngoId: selectedNgo._id, amount: numericAmount, message });
       setShowModal(false);
-      setSuccessMsg(`Donated ₹${parseFloat(amount).toLocaleString()} to ${selectedNgo.profileDetails?.name}!`);
+      setSuccessMsg(`Donated ₹${numericAmount.toLocaleString()} to ${selectedNgo.profileDetails?.name}!`);
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       alert(err.response?.data?.message || 'Donation failed');
@@ -140,7 +143,7 @@ const DonorExplore = () => {
             <h2>Donate to {selectedNgo?.profileDetails?.name}</h2>
             <div className="form-group">
               <label>Amount (₹)</label>
-              <input type="number" min="1" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <input type="number" min="1" max={MAX_DONATION_AMOUNT} placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div className="quick-amounts">
               {[100, 500, 1000, 5000].map((a) => (

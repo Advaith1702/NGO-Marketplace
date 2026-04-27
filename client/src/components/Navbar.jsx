@@ -65,7 +65,13 @@ const Navbar = () => {
           ))}
 
           <div className="nav-user">
-            <span className="nav-user-name">{user.profileDetails?.name || user.email}</span>
+            {user.role === 'ngo' ? (
+              <Link to={`/ngo/${user._id}`} className="nav-user-name ngo-link" onClick={() => setMobileOpen(false)}>
+                {user.profileDetails?.name || user.email}
+              </Link>
+            ) : (
+              <span className="nav-user-name">{user.profileDetails?.name || user.email}</span>
+            )}
             <span className={`nav-role-badge ${user.role}`}>{user.role.toUpperCase()}</span>
             <button className="nav-logout" onClick={handleLogout} title="Logout">
               <HiOutlineLogout />
